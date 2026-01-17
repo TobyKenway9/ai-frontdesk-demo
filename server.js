@@ -18,7 +18,8 @@ const API_KEYS = {
 };
 
 // 📊 CSV logging
-const CSV_FILE = path.join(process.cwd(), "usage_log.csv");
+const CSV_FILE = path.join("/tmp", "usage_log.csv");
+
 if (!fs.existsSync(CSV_FILE)) {
   fs.writeFileSync(CSV_FILE, "timestamp,apiKey,tier,question,reply\n");
 }
@@ -101,6 +102,6 @@ app.get("/stats", (req, res) => {
   res.json({ totalRequests: lines.length, stats: usageStats });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`Server started on port ${PORT}`);
 });
