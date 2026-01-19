@@ -164,12 +164,12 @@ if (typeof reply !== "string") {
 
     fs.appendFile(CSV_FILE, logEntry, () => {});
 
-    const finalReply =
+  const finalReply =
   typeof reply === "object" && reply.text
     ? reply.text
     : String(reply);
 
-res.json({
+  res.json({
   tier: req.tier,
   reply: finalReply
 });
