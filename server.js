@@ -164,7 +164,16 @@ if (typeof reply !== "string") {
 
     fs.appendFile(CSV_FILE, logEntry, () => {});
 
-    res.json({ tier: req.tier, reply });
+    const finalReply =
+  typeof reply === "object" && reply.text
+    ? reply.text
+    : String(reply);
+
+res.json({
+  tier: req.tier,
+  reply: finalReply
+});
+
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
