@@ -1,8 +1,9 @@
 import fetch from "node-fetch";
 import dotenv from "dotenv";
 
-dotenv.config();
+dotenv.config({ path: "./.env" });
 
+console.log("Groq key loaded:", !!process.env.GROQ_API_KEY);
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const MODEL = process.env.GROQ_MODEL ?? "llama-3.1-8b-instant";
 
@@ -11,27 +12,48 @@ if (!GROQ_API_KEY) {
 }
 
 /**
- * DEMO BUSINESS CONTEXT
- * Atlas Auto Repairs virtual front-desk assistant
+ * HARD-LOCKED BUSINESS CONTEXT
+ * This is NOT a chatbot — this is staff
  */
 export const BUSINESS_CONTEXT = `
-You are a virtual front-desk assistant for Atlas Auto Repairs.
+You are the virtual front-desk assistant for Atlas Auto Repairs.
 
-Atlas Auto Repairs is a professional auto repair workshop providing
-general vehicle maintenance and diagnostics for personal vehicles.
+You behave like a professional human receptionist.
 
-Business hours:
-- Monday to Friday: 9:00 AM – 6:00 PM
-- Saturday: 10:00 AM – 3:00 PM
-- Sunday: Closed
+Your purpose:
+- Answer basic customer questions
+- Confirm services offered
+- Share business hours
+- Assist with appointment requests
 
-Your role:
-- Answer customer questions clearly and briefly
-- Help customers understand available services
-- Assist with booking service appointments
-- Provide business hours and availability
+STRICT RULES (non-negotiable):
+- Never give prices
+- Never give repair instructions
+- Never speculate about vehicle issues
+- Never explain how repairs work
+- Never mention being an AI
+- Never use disclaimers
+- Never ask unnecessary follow-up questions
 
-Services offered include:
+If a question is:
+- Technical
+- Diagnostic
+- Price-related
+- Uncertain
+
+You MUST reply with:
+"A technician will be happy to assist you with that. Would you like to book an appointment?"
+
+Tone rules:
+- Professional
+- Calm
+- Brief
+- Confident
+
+Maximum response length: 2 short sentences.
+
+Business details:
+Atlas Auto Repairs provides:
 - Oil changes
 - Brake inspections
 - Engine diagnostics
@@ -39,20 +61,57 @@ Services offered include:
 - Tire services
 - General vehicle inspections
 
-Rules:
-- Do NOT provide price estimates
-- Do NOT give step-by-step repair instructions
-- Do NOT diagnose vehicle problems in detail
-- If a request is technical, complex, or uncertain, say a technician will assist
-- Maintain a professional, calm, and concise tone
+Business hours:
+- Mon–Fri: 9:00 AM – 6:00 PM
+- Sat: 10:00 AM – 3:00 PM
+- Sun: Closed
 `;
 
 /**
+ * Intent guardrail
+ */
+function isRestrictedIntent(prompt) {
+  const blocked = [
+    "price",
+    "cost",
+    "how much",
+    "fix",
+    "repair myself",
+    "step by step",
+    "diagnose",
+    "what's wrong",
+    "why is my car",
+    "engine noise",
+    "check engine",
+  ];
+
+  return blocked.some(word =>
+    prompt.toLowerCase().includes(word)
+  );
+}
+
+/**
+ * Sanitize response
+ */
+function sanitize(text) {
+  return text
+    .replace(/as an ai language model.*?\.?/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
  * GROQ QUERY FUNCTION
- * @param {string} userPrompt - The customer's question
- * @returns {string} AI-generated response
  */
 export async function queryGroq(userPrompt) {
+  // HARD STOP before model call
+  if (isRestrictedIntent(userPrompt)) {
+    return {
+      text: "A technician will be happy to assist you with that. Would you like to book an appointment?",
+      confidence: 1.0,
+    };
+  }
+
   const response = await fetch(
     "https://api.groq.com/openai/v1/chat/completions",
     {
@@ -67,7 +126,8 @@ export async function queryGroq(userPrompt) {
           { role: "system", content: BUSINESS_CONTEXT },
           { role: "user", content: userPrompt },
         ],
-        temperature: 0.4, // lower for consistent answers
+        temperature: 0.2, // LOWER = safer
+        max_tokens: 120,
       }),
     }
   );
@@ -78,5 +138,10 @@ export async function queryGroq(userPrompt) {
   }
 
   const data = await response.json();
-  return data.choices[0].message.content;
+  const raw = data.choices?.[0]?.message?.content ?? "";
+
+  return {
+    text: sanitize(raw),
+    confidence: 0.95,
+  };
 }

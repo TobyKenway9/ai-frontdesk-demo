@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Atlas Auto Frontdesk Demo</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f5f5f5; padding: 40px; }
+    h1 { color: #333; }
+    .container { max-width: 600px; margin: auto; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+    input, textarea { width: 100%; padding: 10px; margin-top: 10px; margin-bottom: 10px; border-radius: 5px; border: 1px solid #ccc; }
+    button { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    button:hover { background: #0056b3; }
+    .reply { margin-top: 20px; padding: 15px; background: #e8f0fe; border-radius: 5px; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Atlas Auto Frontdesk Demo</h1>
+    <p>Ask anything about our services:</p>
+    <input type="text" id="question" placeholder="Type your question here..." />
+    <button onclick="askAI()">Ask</button>
+    <div id="reply" class="reply"></div>
+  </div>
+
+  <script>
+    async function askAI() {
+      const question = document.getElementById('question').value.trim();
+      if (!question) return alert('Please type a question');
+
+      const replyDiv = document.getElementById('reply');
+      replyDiv.textContent = 'Thinking...';
+
+      try {
+        const response = await fetch('/ask', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': 'atlas-demo-key'  // auto use your demo key
+          },
+          body: JSON.stringify({ question })
+        });
+
+        const data = await response.json();
+        if (data.error) {
+          replyDiv.textContent = `Error: ${data.error}`;
+        } else {
+          replyDiv.textContent = data.reply;
+        }
+      } catch (err) {
+        replyDiv.textContent = `Error: ${err.message}`;
+      }
+    }
+  </script>
+</body>
+</html>
