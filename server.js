@@ -147,7 +147,13 @@ app.post("/ask", async (req, res) => {
       return res.status(400).json({ error: "Question is required" });
     }
 
-    const reply = await queryGroq(question);
+    let reply = await queryGroq(question);
+
+// Safety: force reply into a string
+if (typeof reply !== "string") {
+  reply = JSON.stringify(reply);
+}
+
 
     const logEntry =
       `${new Date().toISOString()},` +
