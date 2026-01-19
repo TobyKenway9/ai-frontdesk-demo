@@ -12,10 +12,6 @@
       padding: 40px;
     }
 
-    h1 {
-      color: #333;
-    }
-
     .container {
       max-width: 600px;
       margin: auto;
@@ -24,6 +20,8 @@
       border-radius: 10px;
       box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     }
+
+    h1 { color: #333; }
 
     input {
       width: 100%;
@@ -45,9 +43,7 @@
       cursor: pointer;
     }
 
-    button:hover {
-      background: #0056b3;
-    }
+    button:hover { background: #0056b3; }
 
     .reply {
       margin-top: 20px;
@@ -55,13 +51,6 @@
       background: #e8f0fe;
       border-radius: 5px;
       white-space: pre-wrap;
-      font-size: 15px;
-    }
-
-    .hint {
-      margin-top: 15px;
-      font-size: 13px;
-      color: #777;
     }
   </style>
 </head>
@@ -69,31 +58,26 @@
 <body>
   <div class="container">
     <h1>Atlas Auto Frontdesk</h1>
-    <p>Ask about our services, hours, or booking availability.</p>
+    <p>Ask anything about our services.</p>
 
     <input
       type="text"
       id="question"
-      placeholder="e.g. Do you do brake inspections?"
+      placeholder="Do you do brake inspections?"
     />
 
     <button onclick="askAI()">Ask</button>
 
     <div id="reply" class="reply"></div>
-
-    <div class="hint">
-      This is an automated assistant. For complex issues, a technician will assist you.
-    </div>
   </div>
 
   <script>
     async function askAI() {
-      const questionInput = document.getElementById("question");
+      const question = document.getElementById("question").value.trim();
       const replyDiv = document.getElementById("reply");
 
-      const question = questionInput.value.trim();
       if (!question) {
-        alert("Please type a question.");
+        alert("Type a question first.");
         return;
       }
 
@@ -111,17 +95,17 @@
 
         const data = await response.json();
 
-        if (data.error) {
-          replyDiv.textContent = `Error: ${data.error}`;
-        } else {
-          // Handles BOTH string replies and object replies
-          replyDiv.textContent =
-            typeof data.reply === "object"
-              ? data.reply.text
-              : data.reply;
-        }
+        // ✅ THIS IS THE KEY FIX
+        const answer =
+          data.reply ??
+          data.text ??
+          "Sorry, I couldn’t understand that.";
+
+        replyDiv.textContent = answer;
+
       } catch (err) {
-        replyDiv.textContent = `Error: ${err.message}`;
+        replyDiv.textContent = "Something went wrong. Please try again.";
+        console.error(err);
       }
     }
   </script>
