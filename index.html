@@ -4,31 +4,67 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Atlas Auto Frontdesk Demo</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <style>
-    body { font-family: Arial, sans-serif; background: #f5f5f5; padding: 40px; }
-    h1 { color: #333; }
-    .container { max-width: 600px; margin: auto; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-    input, textarea { width: 100%; padding: 10px; margin-top: 10px; margin-bottom: 10px; border-radius: 5px; border: 1px solid #ccc; }
-    button { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    /* Base Styles */
+    body { margin: 0; font-family: 'Inter', sans-serif; background: #f0f2f5; color: #333; }
+    .container { max-width: 700px; margin: 50px auto; padding: 30px; background: #fff; border-radius: 15px; box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
+    h1 { text-align: center; font-weight: 600; margin-bottom: 20px; color: #111; }
+    p { text-align: center; font-size: 16px; margin-bottom: 20px; color: #555; }
+
+    /* Input & Button */
+    .input-group { display: flex; flex-direction: column; gap: 15px; }
+    input { padding: 12px 15px; font-size: 16px; border: 1px solid #ccc; border-radius: 8px; width: 100%; }
+    button { padding: 12px; font-size: 16px; background: #007bff; color: white; border: none; border-radius: 8px; cursor: pointer; transition: background 0.2s; }
     button:hover { background: #0056b3; }
-    .reply { margin-top: 20px; padding: 15px; background: #e8f0fe; border-radius: 5px; white-space: pre-wrap; }
+
+    /* Reply */
+    .reply { margin-top: 20px; padding: 20px; background: #e7f0ff; border-left: 5px solid #007bff; border-radius: 8px; font-size: 16px; line-height: 1.5; animation: fadeIn 0.3s ease; }
+
+    /* History */
+    .history { margin-top: 30px; }
+    .history h3 { margin-bottom: 15px; font-weight: 600; color: #111; }
+    .history-item { background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid #007bff; }
+    .history-item .question { font-weight: 600; color: #007bff; }
+    .history-item .answer { margin-top: 5px; color: #333; }
+
+    /* Animations */
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Mobile */
+    @media(max-width: 768px) {
+      .container { margin: 30px 15px; padding: 20px; }
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>Atlas Auto Frontdesk Demo</h1>
-    <p>Ask anything about our services:</p>
-    <input type="text" id="question" placeholder="Type your question here..." />
-    <button onclick="askAI()">Ask</button>
-    <div id="reply" class="reply"></div>
+    <p>Ask our virtual assistant anything about our services:</p>
+
+    <div class="input-group">
+      <input type="text" id="question" placeholder="Type your question here..." />
+      <button onclick="askAI()">Ask</button>
+    </div>
+
+    <div id="reply" class="reply" style="display:none;"></div>
+
+    <div class="history">
+      <h3>Last 3 Questions</h3>
+      <div id="history"></div>
+    </div>
   </div>
 
   <script>
+    const lastQuestions = [];
+
     async function askAI() {
-      const question = document.getElementById('question').value.trim();
+      const questionInput = document.getElementById('question');
+      const question = questionInput.value.trim();
       if (!question) return alert('Please type a question');
 
       const replyDiv = document.getElementById('reply');
+      replyDiv.style.display = 'block';
       replyDiv.textContent = 'Thinking...';
 
       try {
@@ -36,30 +72,47 @@
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'x-api-key': 'atlas-demo-key'  // auto use your demo key
+            'x-api-key': 'atlas-demo-key'
           },
           body: JSON.stringify({ question })
         });
 
         const data = await response.json();
 
-        let answer = "Sorry, I couldn’t understand that.";
+        if (data.error) {
+          replyDiv.textContent = `Error: ${data.error}`;
+        } else {
+          let answerText = data.reply;
 
-        if (typeof data.reply === "string") {
-          answer = data.reply;
-        } else if (typeof data.text === "string") {
-          answer = data.text;
-        } else if (data.reply && typeof data.reply.text === "string") {
-          answer = data.reply.text;
-        } else if (data.text && typeof data.text === "object") {
-          answer = data.text.text;
+          // Handle API object response {text:..., confidence:...}
+          if (typeof data.reply === 'object' && data.reply.text) {
+            answerText = data.reply.text;
+          }
+
+          replyDiv.textContent = answerText;
+
+          // Update history
+          lastQuestions.unshift({ question, answer: answerText });
+          if (lastQuestions.length > 3) lastQuestions.pop();
+
+          renderHistory();
         }
-
-        replyDiv.textContent = answer;
-
       } catch (err) {
         replyDiv.textContent = `Error: ${err.message}`;
       }
+
+      questionInput.value = '';
+    }
+
+    function renderHistory() {
+      const historyDiv = document.getElementById('history');
+      historyDiv.innerHTML = '';
+      lastQuestions.forEach(item => {
+        const div = document.createElement('div');
+        div.classList.add('history-item');
+        div.innerHTML = `<div class="question">Q: ${item.question}</div><div class="answer">A: ${item.answer}</div>`;
+        historyDiv.appendChild(div);
+      });
     }
   </script>
 </body>
